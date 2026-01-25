@@ -1,0 +1,1 @@
+{"name":"John Doe","age": 32,"isEmployed": false,"skills": ["Python", "C++", "JavaScript"],"address": {"street": "123 Main St","city": "Anytown","zip": "12345"}}

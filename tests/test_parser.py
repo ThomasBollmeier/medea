@@ -1,4 +1,4 @@
-from medea.json_parser import JsonParser
+from medea_prettify.json_parser import JsonParser
 from alteraparser.ast_ import AstStrWriter
 
 

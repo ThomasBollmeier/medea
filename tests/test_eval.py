@@ -1,5 +1,5 @@
-from medea_prettify.json_eval import json_eval
-from medea_prettify.values import ObjectValue, StringValue, NumberValue, BooleanValue, ArrayValue
+from medea.json_eval import json_eval
+from medea.values import ObjectValue, StringValue, NumberValue, BooleanValue, ArrayValue
 
 
 def test_json_eval_object():

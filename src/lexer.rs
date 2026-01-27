@@ -1,6 +1,6 @@
 #[derive(Debug)]
 pub enum TokenValue {
-    Number(f64, String), // value and original lexeme
+    Number(f64),
     Boolean(bool),
     StringLiteral(String),
     Null,
@@ -15,13 +15,13 @@ pub enum TokenValue {
 #[derive(Debug)]
 pub struct Token {
     pub value: TokenValue,
-    line: usize,
-    column: usize,
+    _line: usize,
+    _column: usize,
 }
 
 impl Token {
     fn new(value: TokenValue, line: usize, column: usize) -> Self {
-        Token { value, line, column }
+        Token { value, _line: line, _column: column }
     }
 }
 
@@ -132,7 +132,7 @@ impl Lexer {
         }
 
         if let Ok(number) = lexeme.parse::<f64>() {
-            return Some(Token::new(TokenValue::Number(number, lexeme), line, column));
+            return Some(Token::new(TokenValue::Number(number), line, column));
         }
 
         None
@@ -173,7 +173,7 @@ mod tests {
         let mut lexer = Lexer::new("123.45");
         let token = lexer.next_token().unwrap();
         match token.value {
-            TokenValue::Number(num, _) => assert_eq!(num, 123.45),
+            TokenValue::Number(num) => assert_eq!(num, 123.45),
             _ => panic!("Expected Number token"),
         }
     }

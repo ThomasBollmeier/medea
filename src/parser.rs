@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use crate::json_value::JsonValue;
 use crate::lexer::{Lexer, Token, TokenValue};
 
@@ -46,11 +46,11 @@ impl Parser {
                     if !member_expected {
                         break
                     }
-                    return Err(anyhow::anyhow!("Trailing comma in object is not allowed"));
+                    return Err(anyhow!("Trailing comma in object is not allowed"));
                 },
                 TokenValue::StringLiteral(key) => {
                     if members.contains_key(&key) {
-                        return Err(anyhow::anyhow!("Duplicate key in object: {}", key));
+                        return Err(anyhow!("Duplicate key in object: {}", key));
                     }
                     member_names.push(key.clone());
                     let colon_token = self.next_token()?;
@@ -58,7 +58,7 @@ impl Parser {
                         let value = self.parse()?;
                         members.insert(key, value);
                     } else {
-                        return Err(anyhow::anyhow!("Expected ':', found {:?}", colon_token));
+                        return Err(anyhow!("Expected ':', found {:?}", colon_token));
                     };
                     let next_token = self.next_token()?;
                     match next_token.value {
@@ -68,12 +68,12 @@ impl Parser {
                         },
                         TokenValue::RBrace => break,
                         _ => {
-                            return Err(anyhow::anyhow!("Expected ',' or '}}', found {:?}", next_token));
+                            return Err(anyhow!("Expected ',' or '}}', found {:?}", next_token));
                         }
                     }
                 }
                 _ => {
-                    return Err(anyhow::anyhow!("Expected string key or '}}', found {:?}", next_token));
+                    return Err(anyhow!("Expected string key or '}}', found {:?}", next_token));
                 }
             }
         }
@@ -93,7 +93,7 @@ impl Parser {
                         self.next_token()?; // consume RBracket
                         break;
                     } else {
-                        return Err(anyhow::anyhow!("Trailing comma in array is not allowed"));
+                        return Err(anyhow!("Trailing comma in array is not allowed"));
                     }
                 }
                 _ => {
@@ -108,7 +108,7 @@ impl Parser {
                             element_expected = true;
                         }
                         TokenValue::RBracket => continue,
-                        _ => return Err(anyhow::anyhow!("Expected ',' or ']', found {:?}", next_token)),
+                        _ => return Err(anyhow!("Expected ',' or ']', found {:?}", next_token)),
                     }
                 }
             }
@@ -121,7 +121,7 @@ impl Parser {
         if let Some(token) = self.tokens.pop_front() {
             Ok(token)
         } else {
-            self.lexer.next_token().ok_or_else(|| anyhow::anyhow!("Unexpected end of input"))
+            self.lexer.next_token().ok_or_else(|| anyhow!("Unexpected end of input"))
         }
     }
 
@@ -130,7 +130,7 @@ impl Parser {
             if let Some(token) = self.lexer.next_token() {
                 self.tokens.push_back(token);
             } else {
-                return Err(anyhow::anyhow!("Unexpected end of input"));
+                return Err(anyhow!("Unexpected end of input"));
             }
         }
         Ok(self.tokens.front().unwrap())

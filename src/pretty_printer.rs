@@ -1,47 +1,60 @@
+use colored::{ColoredString, Colorize};
+
 pub fn pretty_print_json(
     json_str: &str,
     indent_size: usize,
-) -> anyhow::Result<String> {
+    use_colors: bool,
+) -> anyhow::Result<Vec<ColoredString>> {
 
     let json_value = crate::parser::parse_json(json_str)?;
 
-    let mut printer = PrettyPrinter::new(indent_size);
+    let mut printer = PrettyPrinter::new(indent_size, use_colors);
     Ok(printer.pretty_print(&json_value))
+}
+
+enum ColorCategory {
+    Key,
+    Delimiter,
+    String,
+    Normal
 }
 
 pub struct PrettyPrinter {
     indent_size: usize,
+    use_colors: bool,
     level: usize,
     start_line: bool,
-    output: String,
+    output: Vec<ColoredString>,
 }
 
 impl PrettyPrinter {
-    pub fn new(indent_size: usize) -> Self {
+    pub fn new(indent_size: usize, use_colors: bool) -> Self {
         PrettyPrinter {
             indent_size,
+            use_colors,
             level: 0,
             start_line: true,
-            output: String::new(),
+            output: Vec::new(),
         }
     }
 
-    pub fn pretty_print(&mut self, value: &crate::json_value::JsonValue) -> String {
-        self.output = String::new();
+    pub fn pretty_print(&mut self, value: &crate::json_value::JsonValue) -> Vec<ColoredString> {
+        self.output = Vec::new();
         self.level = 0;
         self.start_line = true;
 
         self.print_value(value);
+        self.println("", ColorCategory::Normal); // Final newline
 
         self.output.clone()
     }
 
     fn print_value(&mut self, value: &crate::json_value::JsonValue) {
         match value {
-            crate::json_value::JsonValue::Null => self.print("null"),
-            crate::json_value::JsonValue::Bool(b) => self.print(&b.to_string()),
-            crate::json_value::JsonValue::Number(n) => self.print(&n.to_string()),
-            crate::json_value::JsonValue::String(s) => self.print(&format!("\"{}\"", s)),
+            crate::json_value::JsonValue::Null => self.print("null", ColorCategory::Normal),
+            crate::json_value::JsonValue::Bool(b) => self.print(&b.to_string(), ColorCategory::Normal),
+            crate::json_value::JsonValue::Number(n) => self.print(&n.to_string(), ColorCategory::Normal),
+            crate::json_value::JsonValue::String(s) => self.print(&format!("\"{}\"", s), ColorCategory::String),
             crate::json_value::JsonValue::Array(arr) => self.print_array(arr),
             crate::json_value::JsonValue::Object(names, members) => {
                 self.print_object(names, members)
@@ -51,22 +64,22 @@ impl PrettyPrinter {
 
     fn print_array(&mut self, arr: &Vec<crate::json_value::JsonValue>) {
         if arr.len() == 0 {
-            self.print("[]");
+            self.print("[]", ColorCategory::Delimiter);
             return;
         }
 
-        self.println("[");
+        self.println("[", ColorCategory::Delimiter);
         self.indent();
         for (i, item) in arr.iter().enumerate() {
             self.print_value(&item);
             if i < arr.len() - 1 {
-                self.println(",");
+                self.println(",", ColorCategory::Delimiter);
             } else {
-                self.println("");
+                self.println("", ColorCategory::Normal);
             }
         }
         self.dedent();
-        self.print("]");
+        self.print("]", ColorCategory::Delimiter);
     }
 
     fn print_object(
@@ -75,40 +88,53 @@ impl PrettyPrinter {
         members: &std::collections::HashMap<String, crate::json_value::JsonValue>,
     ) {
         if names.len() == 0 {
-            self.print("{}");
+            self.print("{}", ColorCategory::Delimiter);
             return;
         }
 
-        self.println("{");
+        self.println("{", ColorCategory::Delimiter);
         self.indent();
         for (i, name) in names.iter().enumerate() {
-            self.print(&format!("\"{}\": ", name));
+            self.print(&format!("\"{}\"", name), ColorCategory::Key);
+            self.print(": ", ColorCategory::Delimiter);
             if let Some(value) = members.get(name) {
                 self.print_value(value);
             }
             if i < names.len() - 1 {
-                self.println(",");
+                self.println(",", ColorCategory::Delimiter);
             } else {
-                self.println("");
+                self.println("", ColorCategory::Delimiter);
             }
         }
         self.dedent();
-        self.print("}");
+        self.print("}", ColorCategory::Delimiter);
     }
 
-    fn print(&mut self, text: &str) {
+    fn print(&mut self, text: &str, category: ColorCategory) {
+        let mut text = ColoredString::from(text);
+        if self.use_colors {
+            text = match category {
+                ColorCategory::Key => text.blue(),
+                ColorCategory::Delimiter => text.yellow(),
+                ColorCategory::String => text.green(),
+                ColorCategory::Normal => text.normal(),
+            };
+        }
+
         if self.start_line {
             self.start_line = false;
             let indent_str = " ".repeat(self.indent_size * self.level);
-            self.output += &format!("{}{}", indent_str, text);
+            self.output.push(ColoredString::from(indent_str));
+            self.output.push(text);
         } else {
-            self.output += text;
+            self.output.push(text);
         }
     }
 
-    fn println(&mut self, text: &str) {
-        self.print(text);
-        self.output += "\n";
+    fn println(&mut self, text: &str, category: ColorCategory) {
+        let mut line = String::from(text);
+        line.push('\n');
+        self.print(&line, category);
         self.start_line = true;
     }
 
@@ -145,7 +171,9 @@ mod tests {
     }
 }"#;
 
-        let pretty_json = pretty_print_json(json, 4).unwrap();
+        let pretty_json = pretty_print_json(json, 4, false).unwrap();
+        let pretty_json: String = pretty_json.iter().map(|cs| cs.to_string()).collect();
+
         assert_eq!(pretty_json, expected_json);
     }
 }
